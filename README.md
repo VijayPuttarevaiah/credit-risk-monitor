@@ -19,7 +19,7 @@ It runs on public data. Nothing here touches a real lender's customers.
 | Portfolio | Risk grades A to E, delinquency buckets, roll rates, exposure at default and expected loss | `portfolio.py` |
 | Stress test | Multiplies every account's odds of default under moderate and severe scenarios and recomputes expected loss and grade mix | `portfolio.py` |
 | SQL | Writes scored accounts to SQLite with views for the grade summary, utilization bands and a high-risk watchlist | `db.py` |
-| Commentary | Drafts the monthly commentary with Claude, then rejects the draft if any number in it is not one the pipeline computed | `commentary.py` |
+| Commentary | Drafts the monthly commentary with Claude or a Groq-hosted model, then rejects the draft if any number in it is not one the pipeline computed | `commentary.py` |
 | Dashboard | Streamlit view over all of the above | `app/dashboard.py` |
 
 ## Design choices worth knowing
@@ -73,6 +73,16 @@ credentials available (`ANTHROPIC_API_KEY` or an `ant auth login` profile):
 uv sync --extra ai
 uv run credit-risk-monitor
 ```
+
+Or draft it with a Groq-hosted model (`openai/gpt-oss-120b`) using `GROQ_API_KEY`:
+
+```bash
+uv sync --extra groq
+GROQ_API_KEY=... uv run credit-risk-monitor --provider groq
+```
+
+Either way the draft goes through the same number check. If the key is missing
+or a number does not match, the run says why and falls back to the template.
 
 Outputs land in `reports/`: metrics, information value, scorecard points, grade
 summary, delinquency, roll rates, stress test, calibration, commentary, and

@@ -13,6 +13,7 @@ import re
 import sys
 
 MODEL = "claude-opus-5-5"
+GROQ_MODEL = "openai/gpt-oss-120b"
 NUMBER_RE = re.compile(r"-?\d[\d,]*\.?\d*")
 TOLERANCE = 0.051  # allows a figure to be rounded to one decimal place
 
@@ -96,10 +97,49 @@ def draft_with_claude(facts: dict) -> str | None:
     return "".join(b.text for b in response.content if b.type == "text").strip() or None
 
 
-def generate(facts: dict, use_ai: bool = True) -> tuple[str, str]:
-    """Return (commentary, source) where source is 'claude' or 'template'."""
+def draft_with_groq(facts: dict) -> str | None:
+    """Ask a Groq-hosted model for a draft. Reads GROQ_API_KEY from the environment."""
+    try:
+        import groq
+    except ImportError:
+        _skip("the groq package is not installed (uv sync --extra groq)")
+        return None
+    try:
+        client = groq.Groq()
+        response = client.chat.completions.create(
+            model=GROQ_MODEL,
+            temperature=0.2,
+            messages=[
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": json.dumps(facts, indent=2)},
+            ],
+        )
+    except (groq.AuthenticationError, groq.PermissionDeniedError):
+        _skip("the Groq API key was rejected")
+        return None
+    except groq.APIConnectionError:
+        _skip("could not reach the Groq API")
+        return None
+    except groq.APIStatusError as exc:
+        _skip(f"Groq API returned {exc.status_code}")
+        return None
+    except groq.GroqError:
+        # Raised by the client constructor when GROQ_API_KEY is not set.
+        _skip("GROQ_API_KEY is not set")
+        return None
+    return (response.choices[0].message.content or "").strip() or None
+
+
+DRAFTERS = {"claude": draft_with_claude, "groq": draft_with_groq}
+
+
+def generate(facts: dict, use_ai: bool = True, provider: str = "claude") -> tuple[str, str]:
+    """Return (commentary, source) where source is the provider name or 'template'."""
     if use_ai:
-        draft = draft_with_claude(facts)
-        if draft and not verify(draft, facts):
-            return draft, "claude"
+        draft = DRAFTERS[provider](facts)
+        if draft:
+            unverified = verify(draft, facts)
+            if not unverified:
+                return draft, provider
+            _skip(f"the {provider} draft contained numbers not in the facts: {unverified}")
     return template(facts), "template"

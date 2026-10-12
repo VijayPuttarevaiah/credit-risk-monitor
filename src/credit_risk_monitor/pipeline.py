@@ -2,6 +2,7 @@
 
 Usage:
     uv run credit-risk-monitor            # with AI commentary if credentials exist
+    uv run credit-risk-monitor --provider groq   # draft with a Groq-hosted model
     uv run credit-risk-monitor --no-ai    # deterministic template only
 """
 
@@ -24,7 +25,7 @@ REPORTS_DIR = ROOT / "reports"
 SEED = 42
 
 
-def run(use_ai: bool = True) -> dict:
+def run(use_ai: bool = True, provider: str = "claude") -> dict:
     raw = data.load(data.download(DATA_DIR))
     X = features.build(raw)
     y = raw[data.TARGET]
@@ -67,7 +68,7 @@ def run(use_ai: bool = True) -> dict:
     calibration = metrics.calibration_table(y_hold, pd_hold)
 
     facts = _facts(model_metrics, grades, delinquency, stress)
-    text, source = commentary.generate(facts, use_ai=use_ai)
+    text, source = commentary.generate(facts, use_ai=use_ai, provider=provider)
 
     _write_reports(card, model_metrics, grades, delinquency, rolls, stress, calibration, facts, text, source)
     db.write(scored, REPORTS_DIR / "portfolio.db")
@@ -114,9 +115,15 @@ def _write_reports(card, model_metrics, grades, delinquency, rolls, stress, cali
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run the credit card portfolio risk monitor.")
-    parser.add_argument("--no-ai", action="store_true", help="skip the Claude commentary draft")
+    parser.add_argument("--no-ai", action="store_true", help="skip the AI commentary draft")
+    parser.add_argument(
+        "--provider",
+        choices=sorted(commentary.DRAFTERS),
+        default="claude",
+        help="which model drafts the commentary (default: claude)",
+    )
     args = parser.parse_args()
-    result = run(use_ai=not args.no_ai)
+    result = run(use_ai=not args.no_ai, provider=args.provider)
     hold = result["metrics"]["scorecard_holdout"]
     gbm = result["metrics"]["gradient_boosting_holdout"]
     print(f"Scorecard holdout:         AUC {hold['auc']:.3f}  Gini {hold['gini']:.3f}  KS {hold['ks']:.3f}")

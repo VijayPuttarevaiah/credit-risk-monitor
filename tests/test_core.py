@@ -73,3 +73,14 @@ def test_missing_credentials_falls_back_instead_of_crashing(monkeypatch):
         monkeypatch.delenv(var, raising=False)
     monkeypatch.setenv("HOME", "/nonexistent")  # no `ant auth login` profile either
     assert commentary.draft_with_claude({"gini": 0.484}) is None
+
+
+def test_groq_without_key_falls_back(monkeypatch):
+    pytest.importorskip("groq")
+    monkeypatch.delenv("GROQ_API_KEY", raising=False)
+    assert commentary.draft_with_groq({"gini": 0.484}) is None
+
+
+def test_generate_uses_the_named_provider(monkeypatch):
+    monkeypatch.setitem(commentary.DRAFTERS, "groq", lambda f: "The Gini is 0.484.")
+    assert commentary.generate({"gini": 0.484}, provider="groq") == ("The Gini is 0.484.", "groq")

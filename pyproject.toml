@@ -19,6 +19,9 @@ dependencies = [
 ai = [
     "anthropic>=1.13.0",
 ]
+groq = [
+    "groq>=1.7.0",
+]
 
 [project.scripts]
 credit-risk-monitor = "credit_risk_monitor.pipeline:main"
