@@ -24,20 +24,23 @@ It runs on public data. Nothing here touches a real lender's customers.
 
 ## Design choices worth knowing
 
-- **Demographics are not model inputs.** `SEX`, `MARRIAGE` and `AGE` stay in the
-  data but are never used to score an account.
-- **Every scorecard coefficient must point the right way.** On WoE inputs a safer
-  bin has to lower the predicted risk. If a coefficient comes out positive, the
-  feature is dropped and the model refitted. On this data that removes
-  `utilization` and `payment_ratio`, which overlap 0.91 and 0.81 with their
-  six-month averages.
-- **The AI only writes words around numbers it was given.** The model gets a JSON
-  of computed facts. Its draft is scanned for numbers, and if any of them cannot
-  be traced back to a fact, the draft is thrown away and a fixed template is
-  used. The model never changes a figure or a decision.
-- **Expected loss uses stated assumptions.** EL = PD x LGD x EAD, with LGD 85% and
-  a credit conversion factor of 50% on the unused limit. The dataset has no
-  recovery or drawdown history, so these are assumptions, not estimates.
+Demographics are not model inputs. `SEX`, `MARRIAGE` and `AGE` stay in the data
+but are never used to score an account.
+
+Every scorecard coefficient has to point the right way. On WoE inputs a safer
+bin must lower the predicted risk, so if a coefficient comes out positive the
+feature is dropped and the model refitted. On this data that removes
+`utilization` and `payment_ratio`, which overlap 0.91 and 0.81 with their
+six-month averages.
+
+The model writing the commentary only gets a JSON of numbers the pipeline
+already computed. Its draft is scanned for numbers, and if any of them cannot be
+traced back to that JSON, the draft is thrown away and a fixed template is used
+instead. It never changes a figure or a decision.
+
+Expected loss rests on stated assumptions: EL = PD x LGD x EAD, with LGD at 85%
+and a 50% credit conversion factor on the unused limit. The dataset has no
+recovery or drawdown history, so these are assumptions, not estimates.
 
 ## Results on the current run
 
