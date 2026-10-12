@@ -1,0 +1,33 @@
+[project]
+name = "credit-risk-monitor"
+version = "0.1.0"
+description = "Credit card portfolio risk monitor: PD scorecard, monitoring, expected loss and stress testing on public data"
+readme = "README.md"
+authors = [
+    { name = "vijay_p", email = "vijayputtarevaiah@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "numpy>=2.5.4",
+    "pandas>=3.0.6",
+    "scikit-learn>=1.9.1",
+    "streamlit>=1.65.0",
+    "xlrd>=2.0.2",
+]
+
+[project.optional-dependencies]
+ai = [
+    "anthropic>=1.13.0",
+]
+
+[project.scripts]
+credit-risk-monitor = "credit_risk_monitor.pipeline:main"
+
+[build-system]
+requires = ["uv_build>=0.9.29,<0.10.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]
