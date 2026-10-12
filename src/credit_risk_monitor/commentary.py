@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import re
+import sys
 
 MODEL = "claude-opus-5-5"
 NUMBER_RE = re.compile(r"-?\d[\d,]*\.?\d*")
@@ -55,6 +56,10 @@ def verify(text: str, facts: dict) -> list[float]:
     return [n for n in _numbers(text) if not any(abs(n - a) <= TOLERANCE for a in allowed)]
 
 
+def _skip(reason: str) -> None:
+    print(f"AI commentary skipped: {reason}. Using the template.", file=sys.stderr)
+
+
 def draft_with_claude(facts: dict) -> str | None:
     """Ask Claude for a draft. Returns None if the SDK or credentials are unavailable."""
     try:
@@ -72,13 +77,21 @@ def draft_with_claude(facts: dict) -> str | None:
             fallbacks="default",
             messages=[{"role": "user", "content": json.dumps(facts, indent=2)}],
         )
+    except TypeError:
+        # The SDK raises TypeError when no API key, auth token or profile is configured.
+        _skip("no Anthropic credentials found")
+        return None
     except (anthropic.AuthenticationError, anthropic.PermissionDeniedError):
+        _skip("Anthropic credentials were rejected")
         return None
     except anthropic.APIConnectionError:
+        _skip("could not reach the Anthropic API")
         return None
-    except anthropic.APIStatusError:
+    except anthropic.APIStatusError as exc:
+        _skip(f"Anthropic API returned {exc.status_code}")
         return None
     if response.stop_reason == "refusal":
+        _skip("the model declined the request")
         return None
     return "".join(b.text for b in response.content if b.type == "text").strip() or None
 

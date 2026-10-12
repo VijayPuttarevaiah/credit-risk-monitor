@@ -65,3 +65,11 @@ def test_generate_falls_back_to_template_when_draft_has_bad_numbers(monkeypatch)
     text, source = commentary.generate(facts)
     assert source == "template"
     assert commentary.verify(text, facts) == []
+
+
+def test_missing_credentials_falls_back_instead_of_crashing(monkeypatch):
+    pytest.importorskip("anthropic")
+    for var in ("ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "ANTHROPIC_PROFILE"):
+        monkeypatch.delenv(var, raising=False)
+    monkeypatch.setenv("HOME", "/nonexistent")  # no `ant auth login` profile either
+    assert commentary.draft_with_claude({"gini": 0.484}) is None
